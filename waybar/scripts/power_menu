@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+cursor_json=$(hyprctl -j cursorpos)
+monitors_json=$(hyprctl -j monitors)
+
+read -r screen local_x <<< "$(
+    jq -nr --argjson cursor "$cursor_json" --argjson monitors "$monitors_json" '
+        (($monitors | map(select(
+            .disabled == false
+            and $cursor.x >= .x
+            and $cursor.x < (.x + .width / .scale)
+            and $cursor.y >= .y
+            and $cursor.y < (.y + .height / .scale)
+        )) | .[0]) // $monitors[0]) as $monitor
+        | [$monitor.name, ($cursor.x - $monitor.x | floor)] | @tsv
+    '
+)"
+
+export QS_POWER_SCREEN="$screen"
+export QS_POWER_X="$local_x"
+export QS_POWER_Y=60
+
+exec env -u GTK_THEME qs --no-duplicate --daemonize --path "$HOME"/.config/quickshell/power-menu/shell.qml

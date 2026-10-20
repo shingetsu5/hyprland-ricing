@@ -1,6 +1,6 @@
 {
     "label" : "lock",
-    "action" : "swaylock",
+    "action" : "~/.config/hypr/lock-screen.sh",
     "text" : "Lock"
 }
 

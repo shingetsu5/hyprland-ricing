@@ -2,29 +2,30 @@
   "positionX": "right",
   "positionY": "top",
   "control-center-width": 400,
-
   "widgets": [
     "buttons-grid",
     "mpris",
     "dnd",
     "notifications"
   ],
-
   "widget_config": {
-
     "buttons-grid": {
       "actions": [
         {
           "label": "󰖩",
-          "command": "nm-connection-editor"
+          "command": "~/.config/swaync/open-app.py network"
         },
         {
           "label": "󰂯",
-          "command": "blueman-manager"
+          "command": "~/.config/swaync/open-app.py bluetooth"
         },
         {
           "label": "󰒓",
-          "command": "/home/shingetsu/.config/swaync/scripts/hyprmod_toggle.sh"
+          "command": "~/.config/swaync/scripts/hyprmod_toggle.sh"
+        },
+        {
+          "label": "󰀻",
+          "command": "qs -p ~/.config/quickshell/shell.qml"
         }
       ]
     },

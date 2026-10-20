@@ -1,0 +1,17 @@
+@define-color desktop_surface #ffffff;
+@define-color desktop_surface_alt #edf1f6;
+@define-color desktop_text #292929;
+@define-color desktop_muted #68747d;
+@define-color desktop_accent #429bee;
+@define-color desktop_battery #4a7d4a;
+@define-color desktop_danger #c70e0e;
+@define-color desktop_border #d9e0e5;
+@define-color waybar_surface #ffffff;
+@define-color waybar_surface_alt #edf1f6;
+@define-color waybar_text #292929;
+@define-color waybar_muted #68747d;
+@define-color waybar_accent #429bee;
+@define-color waybar_battery #4a7d4a;
+@define-color waybar_danger #c70e0e;
+@define-color waybar_border #d9e0e5;
+@define-color waybar_mic #cc60ec;

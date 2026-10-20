@@ -1,6 +1,6 @@
 configuration {
     show-icons: true;
-    icon-theme: "Tela";
+    icon-theme: "Flat-Remix-Blue-Dark";
     drun-display-format: "{icon} {name}";
     display-drun: "󰍉";
 }
@@ -24,7 +24,7 @@ window {
     background-color: #dbdbdbf2;
 }
 
-mainbo {
+mainbox {
     padding: 12px;
 }
 

@@ -1,57 +1,15 @@
 #!/usr/bin/env bash
 set -euo pipefail
-
-# CPU usage (%): ????? ??????? ?? ???? ????? ????? /proc/stat
-# ?????? ??? ?????? ? ???????? ??????
-read -r cpu user nice system idle iowait irq softirq steal guest guest_nice < /proc/stat
-prev_idle=$((idle+iowait))
-prev_total=$((user+nice+system+idle+iowait+irq+softirq+steal))
-
+read -r _ u n s i w q f t _ < /proc/stat
+before_idle=$((i+w)); before_total=$((u+n+s+i+w+q+f+t))
 sleep 0.25
-
-read -r cpu user nice system idle iowait irq softirq steal guest guest_nice < /proc/stat
-idle2=$((idle+iowait))
-total2=$((user+nice+system+idle+iowait+irq+softirq+steal))
-
-diff_idle=$((idle2-prev_idle))
-diff_total=$((total2-prev_total))
-usage=$(( (100 * (diff_total - diff_idle)) / diff_total ))
-
-# CPU temp (AMD): k10temp Tctl
-cpu_temp="$(sensors | awk '/k10temp-pci-00c3/,/^$/ {if ($1=="Tctl:") {gsub(/\+|�C/,"",$2); print $2; exit}}' | xargs)"
-
-# ??????? (???? ????????; ??????? kernel modules/cpupower, ?? ????? ???????? ?? sysfs)
-# ????? max ????? policy (??? ????????)
-freq_mhz="$(awk '{sum+=$1; n++} END{if(n) printf "%.0f", (sum/n)/1000; else print ""}' /sys/devices/system/cpu/cpufreq/policy*/scaling_cur_freq 2>/dev/null || true)"
-if [[ -z "${freq_mhz// }" ]]; then
-  freq_mhz="n/a"
-fi
-
-# load average
-loadavg="$(awk '{print $1" "$2" "$3}' /proc/loadavg)"
-
-# ??????? ?????: ?????? ????????
-text="${usage}"
-
-# Tooltip: ????? ????? (?????????? &#10;)
-tooltip="🌡  CPU temp: ${cpu_temp} C&#10;󰉁  CPU freq: ${freq_mhz} MHz&#10;󰄧  Load avg: ${loadavg}"
-
-# ?????? ??? ????? (?? ???????? ??? ??????????? ? ??? ??????)
-cls="ok"
-# ???? temp ?????? ? ?? ????????
-temp_i="${cpu_temp%%.*}"
-if [[ -z "${temp_i// }" ]]; then temp_i=0; fi
-
-if (( temp_i >= 85 || usage >= 90 )); then
-  cls="crit"
-elif (( temp_i >= 75 || usage >= 70 )); then
-  cls="warn"
-fi
-
-# JSON escape ????? python
-json_escape() { python -c 'import json,sys; print(json.dumps(sys.stdin.read()))'; }
-
-printf '{"text":%s,"tooltip":%s,"class":"%s"}\n' \
-  "$(printf "%s" "$text" | json_escape)" \
-  "$(printf "%s" "$tooltip" | json_escape)" \
-  "$cls"
+read -r _ u n s i w q f t _ < /proc/stat
+delta=$((u+n+s+i+w+q+f+t-before_total))
+usage=0
+if ((delta > 0)); then usage=$((100 * (delta - (i+w-before_idle)) / delta)); fi
+temp=$(sensors 2>/dev/null | awk '/Package id 0:/ {gsub(/[+°C]/,"",$4); print $4; exit}' || true)
+freq=$(awk '{sum+=$1; n++} END{if(n) printf "%.0f",sum/n/1000; else print "n/a"}' /sys/devices/system/cpu/cpufreq/policy*/scaling_cur_freq 2>/dev/null || true)
+load=$(awk '{print $1" "$2" "$3}' /proc/loadavg)
+class=ok; temp_num=${temp%%.*}; temp_num=${temp_num:-0}
+if ((temp_num >= 85 || usage >= 90)); then class=crit; elif ((temp_num >= 75 || usage >= 70)); then class=warn; fi
+jq -cn --arg text "$usage" --arg tooltip "CPU: ${temp:-n/a} °C"$'\n'"Frequency: ${freq:-n/a} MHz"$'\n'"Load: $load" --arg class "$class" '{text:$text,tooltip:$tooltip,class:$class}'

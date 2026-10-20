@@ -5,18 +5,8 @@
     "custom/cpu": {
         "interval": 10,
         "return-type": "json",
-        "exec": "/home/shingetsu/.config/waybar/scripts/cpu_waybar.sh",
+        "exec": "~/.config/waybar/scripts/cpu_waybar.sh",
         "format": "  {}%",
-        "on-click": "kitty --start-as=fullscreen --title htop sh -c 'htop'",
-        "tooltip": true
-    },
-
-    // GPU
-    "custom/gpu": {
-        "return-type": "json",
-        "exec": "/home/shingetsu/.config/waybar/scripts/gpu_waybar.sh",
-        "interval": 2,
-        "format": "󰢮  {}%",
         "on-click": "kitty --start-as=fullscreen --title htop sh -c 'htop'",
         "tooltip": true
     },
@@ -35,12 +25,13 @@
     // Lock screem
     "custom/lock_screen": {
         "format": "󰌾",
-        "on-click": "sh -c '(sleep 0.5s; swaylock)' & disown",
+        "on-click": "sh -c '(sleep 0.5s; ~/.config/hypr/lock-screen.sh)' & disown",
         "tooltip": false
     },
 
     // Clock
     "clock": {
+        "tooltip": false,
         "tooltip-format": "<big>{:%Y %B}</big>\n<tt><small>{calendar}</small></tt>",
 	"format-alt": "{:%Y-%m-%d}"
     },
@@ -54,9 +45,9 @@
 
     // Updates
     "custom/updates": {
-        "exec": "/home/shingetsu/.config/waybar/scripts/updates.sh",
+        "exec": "~/.config/waybar/scripts/updates.sh",
         "interval": 600,
-        "on-click": "/home/shingetsu/.config/waybar/scripts/updates_menu.sh",
+        "on-click": "~/.config/waybar/scripts/updates_menu.sh",
         "format": "{}",
         "tooltip": true
     },
@@ -72,7 +63,7 @@
         "tooltip": true,
         "on-click": "activate",
         "on-click-middle": "close",
-        "on-click-right": "/home/shingetsu/.config/waybar/scripts/taskbar.sh",
+        "on-click-right": "~/.config/waybar/scripts/taskbar.sh",
         "sort-by-app-id": true
     },
 
@@ -87,10 +78,10 @@
     "pulseaudio": {
         "format": "󰋋  {volume}%",
         "format-muted": "󰟎  {volume}%",
-        "on-click": "/home/shingetsu/.config/waybar/scripts/volume --toggle",
+        "on-click": "~/.config/waybar/scripts/volume --toggle",
         "on-click-right": "pavucontrol",
-        "on-scroll-up": "/home/shingetsu/.config/waybar/scripts/volume --inc",
-        "on-scroll-down": "/home/shingetsu/.config/waybar/scripts/volume --dec",
+        "on-scroll-up": "~/.config/waybar/scripts/volume --inc",
+        "on-scroll-down": "~/.config/waybar/scripts/volume --dec",
         "scroll-step": 5
     },
 
@@ -99,11 +90,22 @@
         "format": "{format_source}",
         "format-source-muted": "󰍭 {volume}%",
         "format-source": "󰍬 {volume}%",
-        "on-click": "/home/shingetsu/.config/waybar/scripts/volume --toggle-mic",
+        "on-click": "~/.config/waybar/scripts/volume --toggle-mic",
         "on-click-right": "pavucontrol",
-        "on-scroll-up": "/home/shingetsu/.config/waybar/scripts/volume --mic-inc",
-        "on-scroll-down": "/home/shingetsu/.config/waybar/scripts/volume --mic-dec",
+        "on-scroll-up": "~/.config/waybar/scripts/volume --mic-inc",
+        "on-scroll-down": "~/.config/waybar/scripts/volume --mic-dec",
         "scroll-step": 5
+    },
+
+    // Laptop battery
+    "battery": {
+        "interval": 30,
+        "format": "󰁹 {capacity}%",
+        "format-charging": "󰂄 {capacity}%",
+        "format-plugged": "󰂄 {capacity}%",
+        "format-full": "󰁹 {capacity}%",
+        "tooltip": true,
+        "on-click": "~/.config/waybar/scripts/power_menu"
     },
 
     // Language

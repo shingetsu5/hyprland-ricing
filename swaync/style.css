@@ -1,15 +1,16 @@
+@import url("../appearance/colors.css");
 * {
     font-family: Roboto Medium;
     font-size: 13px;
 }
 
 .notification {
-    background: #1e1e2e;
-    color: #cdd6f4;
+    background: @desktop_surface;
+    color: @desktop_text;
     border-radius: 12px;
     padding: 10px;
     margin: 5px;
-    border: 1px solid #89b4fa;
+    border: 1px solid @desktop_accent;
 }
 
 .notification-title {
@@ -17,7 +18,7 @@
 }
 
 .control-center {
-    background: #1e1e2e;
+    background: @desktop_surface;
     border-radius: 16px;
     padding: 10px;
     margin-right: 10px;
@@ -26,20 +27,18 @@
 }
 
 .widget-buttons-grid {
-    display: flex;
-    justify-content: space-between;
     margin-bottom: 10px;
 }
 
 .widget-buttons-grid button {
-    background: #313244;
+    background: @desktop_surface_alt;
     border-radius: 12px;
     padding: 10px;
     font-size: 18px;
 }
 
 .widget-mpris {
-    background: #313244;
+    background: @desktop_surface_alt;
     border-radius: 14px;
     padding: 10px;
     margin-bottom: 10px;
@@ -47,4 +46,37 @@
 
 .widget-dnd {
     margin-bottom: 10px;
+}
+.control-center, .notification, .widget-buttons-grid button { color: @desktop_text; }
+
+/* SwayNC's built-in labels use these variables instead of inherited color. */
+:root {
+    --cc-bg: @desktop_surface;
+    --text-color: @desktop_text;
+    --text-color-disabled: @desktop_muted;
+    --noti-border-color: @desktop_border;
+    --noti-bg-darker: @desktop_surface_alt;
+    --noti-bg-hover: @desktop_surface_alt;
+    --noti-bg-focus: alpha(@desktop_accent, 0.12);
+    --noti-close-bg: @desktop_surface_alt;
+    --noti-close-bg-hover: alpha(@desktop_text, 0.15);
+    --bg-selected: @desktop_accent;
+}
+
+.notification-content image {
+    color: @desktop_text;
+}
+
+.notification-content progressbar trough {
+    background: @desktop_surface_alt;
+    border: none;
+    border-radius: 6px;
+    min-height: 6px;
+}
+
+.notification-content progressbar progress {
+    background: @desktop_accent;
+    border: none;
+    border-radius: 6px;
+    min-height: 6px;
 }

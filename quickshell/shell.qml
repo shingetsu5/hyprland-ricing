@@ -4,18 +4,43 @@ import QtQuick.Layouts
 import Qt.labs.folderlistmodel
 import Quickshell
 import Quickshell.Widgets
+import Quickshell.Io
 
 ApplicationWindow {
-    visible: true
+    id: launcher
+    SystemTheme { id: systemTheme }
+    WallpaperSettings { id: wallpaperSettings }
+    visible: systemTheme.ready
     width: 860
     height: 640
     color: "transparent"//"#2e271e"
+
+    // Fixed glass palette: independent of the system's light/dark preference.
+    QtObject {
+        id: glass
+        readonly property color background: "#a6212e39"
+        readonly property color rim: "#45c5d4dd"
+        readonly property color surface: "#08ffffff"
+        readonly property color panel: "#12ffffff"
+        readonly property color field: "#16202d37"
+        readonly property color border: "#24c5d4dd"
+        readonly property color hover: "#1cbed2df"
+        readonly property color selected: "#385e7e93"
+        readonly property color selectedRim: "#809eb9ca"
+        readonly property color text: "#e6edf2"
+        readonly property color muted: "#aebdc7"
+        readonly property color selectedText: "#f1f5f8"
+        readonly property color iconBackground: "#12ffffff"
+        readonly property color knob: "#d6e0e6"
+        readonly property color knobRim: "#70c2d1db"
+        readonly property color thumbnail: "#35202d37"
+    }
 
     property string currentTab: "Apps"
     property string searchText: ""
     property string selectedWallpaper: ""
     property int selectedAppIndex: -1
-    property bool lightTheme: false
+    readonly property bool lightTheme: systemTheme.light
     property var sortedApps: []
     readonly property string normalizedSearch: searchText.trim().toLowerCase()
 
@@ -49,6 +74,11 @@ ApplicationWindow {
         }
 
         return "image://icon/" + iconName
+    }
+
+    function scrollView(view, wheel) {
+        view.scrollWheel(wheel.angleDelta.y, wheel.pixelDelta.y)
+        wheel.accepted = true
     }
 
     function focusSearch() {
@@ -119,8 +149,9 @@ ApplicationWindow {
     function syncSelectedApp() {
         selectedAppIndex = firstMatchedAppIndex()
 
-        if (currentTab === "Apps" && contentLoader.item && selectedAppIndex >= 0) {
-            contentLoader.item.positionViewAtIndex(selectedAppIndex, ListView.Contain)
+        if (currentTab === "Apps" && appsLoader.item && selectedAppIndex >= 0) {
+            appsLoader.item.stopSmoothScroll()
+            appsLoader.item.positionViewAtIndex(selectedAppIndex, ListView.Contain)
         }
     }
 
@@ -133,8 +164,9 @@ ApplicationWindow {
 
         selectedAppIndex = nextIndex
 
-        if (currentTab === "Apps" && contentLoader.item) {
-            contentLoader.item.positionViewAtIndex(selectedAppIndex, ListView.Contain)
+        if (currentTab === "Apps" && appsLoader.item) {
+            appsLoader.item.stopSmoothScroll()
+            appsLoader.item.positionViewAtIndex(selectedAppIndex, ListView.Contain)
         }
     }
 
@@ -166,7 +198,7 @@ ApplicationWindow {
 
     FolderListModel {
         id: wallpapersModel
-        folder: "file:///home/shingetsu/Pictures/wallpapers"
+        folder: "file://" + wallpaperSettings.directory
         nameFilters: ["*.jpg", "*.jpeg", "*.png", "*.webp"]
         showDirs: false
         showDotAndDotDot: false
@@ -176,9 +208,9 @@ ApplicationWindow {
     Rectangle {
         anchors.fill: parent
         radius: 26
-        color: "#11131acc"
+        color: glass.background
         border.width: 1
-        border.color: "#2d3340"
+        border.color: glass.rim
     }
 
     ColumnLayout {
@@ -194,7 +226,7 @@ ApplicationWindow {
                 Layout.preferredWidth: 260
                 Layout.preferredHeight: 52
                 radius: 18
-                color: "#1a1e26"
+                color: glass.panel
 
                 property int tabWidth: 120
                 property int tabHeight: 40
@@ -207,9 +239,9 @@ ApplicationWindow {
                     width: parent.tabWidth
                     height: parent.tabHeight
                     radius: 14
-                    color: "#3c2a2a"
+                    color: glass.selected
                     border.width: 1
-                    border.color: "#8d5a5a"
+                    border.color: glass.selectedRim
 
                     x: currentTab === "Apps"
                     ? parent.sidePadding
@@ -236,7 +268,7 @@ ApplicationWindow {
                         Text {
                             anchors.centerIn: parent
                             text: "Apps"
-                            color: currentTab === "Apps" ? "#f1f5fb" : "#97a0af"
+                            color: currentTab === "Apps" ? glass.selectedText : glass.muted
                             font.pixelSize: 16
                             font.weight: Font.Medium
 
@@ -260,7 +292,7 @@ ApplicationWindow {
                         Text {
                             anchors.centerIn: parent
                             text: "Walls"
-                            color: currentTab === "Walls" ? "#ffaaaa" : "#97a0af"
+                            color: currentTab === "Walls" ? glass.selectedText : glass.muted
                             font.pixelSize: 16
                             font.weight: Font.Medium
 
@@ -286,16 +318,20 @@ ApplicationWindow {
                 Layout.preferredHeight: 52
                 Layout.alignment: Qt.AlignRight
                 radius: 18
-                color: "#1a1e26"
+                color: glass.panel
 
                 Rectangle {
+                    id: themeTrack
+                    Accessible.role: Accessible.CheckBox
+                    Accessible.checked: launcher.lightTheme
+                    Accessible.name: launcher.lightTheme ? "Системная тема: светлая" : "Системная тема: тёмная"
                     anchors.centerIn: parent
                     width: 70
                     height: 34
                     radius: 17
-                    color: lightTheme ? "#f3f5f8" : "#0f1218"
+                    color: lightTheme ? "#244d6576" : "#24202c37"
                     border.width: 1
-                    border.color: lightTheme ? "#d8dee8" : "#353b47"
+                    border.color: lightTheme ? "#7090a5b2" : "#507f94a1"
 
                     Behavior on color {
                         ColorAnimation { duration: 220 }
@@ -311,11 +347,30 @@ ApplicationWindow {
                         width: 30
                         height: 30
                         radius: 15
-                        color: lightTheme ? "#ffffff" : "#232833"
+                        color: lightTheme ? "#c7d2d9" : "#526775"
                         border.width: 1
-                        border.color: lightTheme ? "#e7ebf3" : "#404857"
+                        border.color: lightTheme ? "#70c2d1db" : "#6094a8b5"
 
                         x: lightTheme ? parent.width - width - 2 : 2
+
+                        Text {
+                            anchors.centerIn: parent
+                            text: "☀"
+                            font.family: "DejaVu Sans"
+                            font.pixelSize: 17
+                            color: "#506775"
+                            opacity: launcher.lightTheme ? 1 : 0
+                            Behavior on opacity { NumberAnimation { duration: 180 } }
+                        }
+                        Text {
+                            anchors.centerIn: parent
+                            text: "☾"
+                            font.family: "DejaVu Sans"
+                            font.pixelSize: 19
+                            color: "#d0dce4"
+                            opacity: launcher.lightTheme ? 0 : 1
+                            Behavior on opacity { NumberAnimation { duration: 180 } }
+                        }
 
                         Behavior on x {
                             NumberAnimation {
@@ -345,7 +400,9 @@ ApplicationWindow {
                     MouseArea {
                         id: themeSwitchArea
                         anchors.fill: parent
-                        onClicked: lightTheme = !lightTheme
+                        enabled: systemTheme.ready && !systemTheme.busy
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: systemTheme.setLight(!lightTheme)
                     }
                 }
             }
@@ -355,18 +412,20 @@ ApplicationWindow {
             Layout.fillWidth: true
             Layout.preferredHeight: 54
             radius: 16
-            color: "#0f1218"
+            color: glass.field
             border.width: 1
-            border.color: "#353b47"
+            border.color: glass.border
 
             TextField {
                 id: searchField
                 anchors.fill: parent
                 anchors.leftMargin: 16
                 anchors.rightMargin: 16
-                color: "#e7ebf3"
+                color: glass.text
                 placeholderText: currentTab === "Walls" ? "Search wallpapers..." : "Search apps..."
-                placeholderTextColor: "#788190"
+                placeholderTextColor: glass.muted
+                selectionColor: glass.selected
+                selectedTextColor: glass.selectedText
                 font.pixelSize: 17
                 background: null
                 selectByMouse: true
@@ -396,18 +455,46 @@ ApplicationWindow {
             }
         }
 
-        Loader {
-            id: contentLoader
+        Item {
             Layout.fillWidth: true
             Layout.fillHeight: true
-            sourceComponent: currentTab === "Walls" ? wallsComponent : appsComponent
 
-            onLoaded: {
-                if (currentTab === "Apps") {
+            // Keep both views alive so tab changes only switch visibility.
+            Loader {
+                id: appsLoader
+                anchors.fill: parent
+                visible: currentTab === "Apps"
+                sourceComponent: appsComponent
+
+                onLoaded: {
                     syncSelectedApp()
-                    focusSearch()
+                    if (currentTab === "Apps") {
+                        focusSearch()
+                    }
                 }
             }
+
+            Loader {
+                id: wallsLoader
+                anchors.fill: parent
+                visible: currentTab === "Walls"
+                asynchronous: true
+                sourceComponent: wallsComponent
+            }
+        }
+    }
+
+    IpcHandler {
+        target: "appearance"
+        function setLight(value: bool): void { systemTheme.setLight(value) }
+        function state(): string {
+            let view = launcher.currentTab === "Apps" ? appsLoader.item : wallsLoader.item
+            return JSON.stringify({glassBackground: glass.background.toString(), glassText: glass.text.toString(),
+                glassSelection: glass.selected.toString(), tab: launcher.currentTab, light: launcher.lightTheme, ready: systemTheme.ready, busy: systemTheme.busy,
+                scrollY: view ? view.contentY : 0, scrollTarget: view ? view.scrollDestination : 0,
+                scrolling: view ? view.scrollAnimating : false,
+                scrollMin: view ? view.originY : 0,
+                scrollMax: view ? view.originY + Math.max(0, view.contentHeight - view.height) : 0})
         }
     }
 
@@ -429,11 +516,23 @@ ApplicationWindow {
 
         ListView {
             id: appsList
+            readonly property bool scrollAnimating: scrollMotion.running
+            readonly property real scrollDestination: scrollMotion.destination
+            function scrollWheel(angle, pixels) { scrollMotion.scroll(angle, pixels) }
+            function stopSmoothScroll() { scrollMotion.cancel() }
+            SmoothScroll { id: scrollMotion; view: appsList }
             anchors.fill: parent
             clip: true
             spacing: 10
             boundsBehavior: Flickable.StopAtBounds
             model: sortedApps
+
+            WheelHandler {
+                target: null
+                blocking: true
+                acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
+                onWheel: (wheel) => scrollView(appsList, wheel)
+            }
 
             delegate: Rectangle {
                 required property var modelData
@@ -446,9 +545,9 @@ ApplicationWindow {
                 width: appsList.width
                 height: matched ? 68 : 0
                 radius: 18
-                color: selected ? "#211817" : (hovered ? "#171c24" : "#10141b")
+                color: selected ? glass.selected : (hovered ? glass.hover : glass.surface)
                 border.width: matched ? 1 : 0
-                border.color: selected ? "#d28a8a" : (hovered ? "#8d5a5a" : "#2d3440")
+                border.color: selected ? glass.selectedRim : (hovered ? glass.selectedRim : glass.border)
                 visible: height > 0
                 opacity: matched ? 1 : 0
 
@@ -478,9 +577,9 @@ ApplicationWindow {
                         Layout.preferredWidth: 42
                         Layout.preferredHeight: 42
                         radius: 12
-                        color: "#1c222c"
+                        color: glass.iconBackground
                         border.width: 1
-                        border.color: "#303846"
+                        border.color: glass.border
 
                         IconImage {
                             anchors.centerIn: parent
@@ -498,7 +597,7 @@ ApplicationWindow {
                         Text {
                             Layout.fillWidth: true
                             text: entry.name || entry.id || "Unknown app"
-                            color: selected ? "#fff1f1" : "#e7ebf3"
+                            color: selected ? glass.selectedText : glass.text
                             font.pixelSize: 16
                             font.weight: Font.Medium
                             elide: Text.ElideRight
@@ -507,7 +606,7 @@ ApplicationWindow {
                         Text {
                             Layout.fillWidth: true
                             text: entry.genericName || entry.comment || entry.id || ""
-                            color: selected ? "#d8b2b2" : "#8f98a8"
+                            color: selected ? glass.muted : glass.muted
                             font.pixelSize: 12
                             elide: Text.ElideRight
                             visible: text.length > 0
@@ -518,6 +617,7 @@ ApplicationWindow {
                 MouseArea {
                     anchors.fill: parent
                     hoverEnabled: true
+                    scrollGestureEnabled: false
 
                     onEntered: parent.hovered = true
                     onExited: parent.hovered = false
@@ -529,7 +629,21 @@ ApplicationWindow {
             }
 
             ScrollBar.vertical: ScrollBar {
+                id: appsScrollBar
                 policy: ScrollBar.AsNeeded
+                implicitWidth: 8
+                padding: 2
+                minimumSize: 0.08
+                onPressedChanged: if (pressed) appsList.stopSmoothScroll()
+                background: Item {}
+                contentItem: Rectangle {
+                    implicitWidth: 4
+                    implicitHeight: 40
+                    radius: 2
+                    color: glass.muted
+                    opacity: appsScrollBar.pressed ? 0.9 : appsScrollBar.active ? 0.65 : 0.3
+                    Behavior on opacity { NumberAnimation { duration: 140 } }
+                }
             }
         }
     }
@@ -539,6 +653,11 @@ ApplicationWindow {
 
         GridView {
             id: wallsGrid
+            readonly property bool scrollAnimating: scrollMotion.running
+            readonly property real scrollDestination: scrollMotion.destination
+            function scrollWheel(angle, pixels) { scrollMotion.scroll(angle, pixels) }
+            function stopSmoothScroll() { scrollMotion.cancel() }
+            SmoothScroll { id: scrollMotion; view: wallsGrid }
             anchors.fill: parent
             cellWidth: 180
             cellHeight: 150
@@ -547,12 +666,19 @@ ApplicationWindow {
 
             model: wallpapersModel
 
+            WheelHandler {
+                target: null
+                blocking: true
+                acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
+                onWheel: (wheel) => scrollView(wallsGrid, wheel)
+            }
+
             delegate: Item {
                 width: wallsGrid.cellWidth
                 height: wallsGrid.cellHeight
 
                 property string wallUrl: fileUrl
-                property string wallPath: fileUrl.toString().replace("file://", "")
+                property string wallPath: decodeURIComponent(fileUrl.toString().replace("file://", ""))
                 property string wallName: fileName
                 property bool matched: searchText === ""
                                        || wallName.toLowerCase().indexOf(searchText.toLowerCase()) !== -1
@@ -567,9 +693,9 @@ ApplicationWindow {
                     anchors.margins: 8
                     height: 132
                     radius: 18
-                    color: hovered ? "#1a1f27" : "#10141b"
+                    color: hovered ? glass.hover : glass.surface
                     border.width: selectedWallpaper === wallPath ? 2 : 1
-                    border.color: selectedWallpaper === wallPath ? "#d28a8a" : "#2d3440"
+                    border.color: selectedWallpaper === wallPath ? glass.selectedRim : glass.border
 
                     property bool hovered: false
 
@@ -591,11 +717,15 @@ ApplicationWindow {
                         height: 90
                         radius: 12
                         clip: true
-                        color: "#0b0d12"
+                        color: glass.thumbnail
 
                         Image {
                             anchors.fill: parent
                             source: wallUrl
+                            asynchronous: true
+                            // Decode a thumbnail instead of the full wallpaper.
+                            sourceSize.width: 288
+                            sourceSize.height: 180
                             fillMode: Image.PreserveAspectCrop
                         }
                     }
@@ -608,7 +738,7 @@ ApplicationWindow {
                         anchors.rightMargin: 12
                         anchors.bottomMargin: 10
                         text: wallName
-                        color: selectedWallpaper === wallPath ? "#efb1b1" : "#d8dde7"
+                        color: selectedWallpaper === wallPath ? glass.selectedText : glass.text
                         font.pixelSize: 13
                         elide: Text.ElideRight
                         horizontalAlignment: Text.AlignHCenter
@@ -617,6 +747,7 @@ ApplicationWindow {
                     MouseArea {
                         anchors.fill: parent
                         hoverEnabled: true
+                        scrollGestureEnabled: false
 
                         onEntered: card.hovered = true
                         onExited: card.hovered = false
@@ -626,19 +757,8 @@ ApplicationWindow {
                             console.log("Set wallpaper:", wallPath)
 
                             Quickshell.execDetached([
-                                "bash",
-                                "-lc",
-                                "wall=\"$1\"; " +
-                                "conf=\"$HOME/.config/hypr/hyprpaper.conf\"; " +
-
-                                "hyprctl hyprpaper preload \"$wall\"; " +
-                                "hyprctl monitors -j | jq -r '.[].description' | while read -r mon; do " +
-                                "hyprctl hyprpaper wallpaper \"desc:$mon,$wall\"; " +
-                                "done; " +
-
-                                "escaped=$(printf '%s\n' \"$wall\" | sed 's/[&/\\\\]/\\\\&/g'); " +
-                                "sed -i \"s|^\\([[:space:]]*path[[:space:]]*=[[:space:]]*\\).*|\\1$escaped|\" \"$conf\"",
-                                "_",
+                                Quickshell.env("HOME") + "/.config/hypr/wallpaper.sh",
+                                "set",
                                 wallPath
                             ])
                         }

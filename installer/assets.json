@@ -1,0 +1,18 @@
+{
+  "gtk": {
+    "url": "https://codeload.github.com/daniruiz/flat-remix-gtk/tar.gz/refs/tags/20240730",
+    "sha256": "622ea576999bbdd5c76faa685dd58fff6a34cf3d7d6939a94b3742ed8cfd37ba"
+  },
+  "icons": {
+    "url": "https://codeload.github.com/daniruiz/flat-remix/tar.gz/refs/tags/20211106",
+    "sha256": "4f794d4c71a8b5729d00aac20364ab43047560f803f9ea3f784c72c58fe22f7d"
+  },
+  "cursor": {
+    "url": "https://github.com/ful1e5/Bibata_Cursor/releases/download/v2.0.7/Bibata-Modern-Ice.tar.xz",
+    "sha256": "a68cae60c4dc706350e194ebc91c5fe48bc7bc9d59e119555834a2a7ee5078ef"
+  },
+  "symbols": {
+    "url": "https://github.com/ryanoasis/nerd-fonts/releases/download/v3.4.0/NerdFontsSymbolsOnly.tar.xz",
+    "sha256": "7f8c090da3b0eaa7108646bf34cbbb6ed13d5358a72460522108b06c7ecd716a"
+  }
+}

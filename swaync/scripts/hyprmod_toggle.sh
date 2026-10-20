@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
 
-export GTK_THEME=Orchis-Dark
 
 if pgrep -f "uv run hyprmod" > /dev/null 2>&1; then
     pkill -f "uv run hyprmod"
