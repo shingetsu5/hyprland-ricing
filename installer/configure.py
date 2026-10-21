@@ -10,7 +10,7 @@ import shutil
 import subprocess
 import sys
 
-CONFIG_DIRS = ('hypr', 'waybar', 'kitty', 'rofi', 'swaync', 'quickshell', 'fastfetch', 'appearance')
+CONFIG_DIRS = ('hypr', 'waybar', 'kitty', 'swaync', 'quickshell', 'fastfetch', 'appearance')
 RESOLUTIONS = {'preferred', '1920x1080', '2560x1440', '3072x1920', '3840x2160'}
 REFRESH_RATES = {'60', '75', '90', '120', '144', '165', '240'}
 SCALES = {'1', '1.5', '2'}

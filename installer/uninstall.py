@@ -14,6 +14,7 @@ import sys
 
 import state
 
+# Legacy configuration names remain valid for restoring older installation backups.
 MANAGED = {'.config/' + name for name in
            ('hypr', 'waybar', 'kitty', 'rofi', 'swaync', 'quickshell', 'fastfetch', 'appearance', 'wlogout')}
 MANAGED.update(('.config/systemd/user/quickshell-desktop-session.target',

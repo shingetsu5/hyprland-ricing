@@ -48,7 +48,6 @@ qt6-qtdeclarative
 qt6-qtmultimedia
 qt6-qtsvg
 quickshell
-rofi
 slurp
 swappy
 swww

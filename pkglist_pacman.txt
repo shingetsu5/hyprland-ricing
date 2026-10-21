@@ -48,7 +48,6 @@ qt6-declarative
 qt6-multimedia-ffmpeg
 qt6-svg
 quickshell
-rofi
 slurp
 swappy
 swaync
