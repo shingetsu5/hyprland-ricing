@@ -9,6 +9,10 @@
 
 ---
 
+https://github.com/user-attachments/assets/4b9e094f-8218-4b18-a1aa-ebacefb8cd95
+
+---
+
 ## 🧭 Навигация
 
 [🐧 Системы](#systems) · [✨ Компоненты](#components) · [🚀 Установка](#installation) · [🎛️ Параметры](#options)
