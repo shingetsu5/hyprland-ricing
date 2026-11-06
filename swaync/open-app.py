@@ -11,6 +11,7 @@ import time
 APPS = {
     "network": ("Nm-connection-editor", ["nm-connection-editor"]),
     "bluetooth": ("Blueman-manager", ["blueman-manager"]),
+    "settings": ("gnome-control-center", ["gnome-control-center"]),
 }
 
 
@@ -24,9 +25,9 @@ def clients():
         return []
 
 
-def dispatch(action, *args):
+def dispatch(action):
     return subprocess.run(
-        ["hyprctl", "dispatch", action, *args],
+        ["hyprctl", "dispatch", action],
         capture_output=True,
         text=True,
     ).returncode == 0
@@ -46,6 +47,8 @@ def main():
     window = target_window(window_class)
     if window is None:
         env = os.environ.copy()
+        if sys.argv[1] == "settings":
+            env["XDG_CURRENT_DESKTOP"] = "GNOME"
         subprocess.Popen(
             command,
             env=env,
@@ -64,14 +67,16 @@ def main():
         return 1
 
     address = f"address:{window['address']}"
+    # JSON string quoting is also valid for these Lua window selectors.
+    selector = json.dumps(address)
     actions = (
-        ("focuswindow", address),
-        ("setfloating", address),
-        ("resizewindowpixel", f"exact 900 600,{address}"),
-        ("centerwindow", "1"),
+        f'hl.dsp.focus({{window={selector}}})',
+        f'hl.dsp.window.float({{window={selector},action="on"}})',
+        f'hl.dsp.window.resize({{window={selector},x=900,y=600,relative=false}})',
+        f'hl.dsp.window.center({{window={selector}}})',
     )
-    for action, argument in actions:
-        if not dispatch(action, argument):
+    for action in actions:
+        if not dispatch(action):
             subprocess.Popen(["notify-send", "Не удалось разместить окно настроек"])
             return 1
     return 0

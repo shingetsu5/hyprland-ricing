@@ -16,6 +16,7 @@ file-roller
 fontconfig
 gcc
 git
+gnome-control-center
 google-noto-emoji-fonts
 google-noto-sans-cjk-fonts
 google-noto-sans-fonts
@@ -54,7 +55,6 @@ swww
 thunar-archive-plugin
 tumbler
 util-linux
-uv
 vim-enhanced
 waybar
 wireplumber

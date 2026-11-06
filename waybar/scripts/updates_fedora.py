@@ -13,6 +13,7 @@ import re
 import subprocess
 import sys
 import termios
+from urllib.parse import unquote
 
 STOP = "Остановить обновление"
 RETRY = "Повторить попытку"
@@ -45,11 +46,86 @@ def problem_packages(output, installed, excluded):
     return sorted(found)
 
 
+def download_packages(output, excluded):
+    # Only use final failed filenames, not transient mirror errors or progress.
+    found = set()
+    for filename in re.findall(r"Cannot download ([^\s/:]+\.rpm):", output):
+        parts = unquote(filename[:-4]).rsplit("-", 2)
+        if len(parts) != 3 or "." not in parts[2]:
+            continue
+        spec = parts[0] + "." + parts[2].rsplit(".", 1)[1]
+        if re.fullmatch(r"[A-Za-z0-9_][A-Za-z0-9_.+-]*", spec) and spec not in excluded:
+            found.add(spec)
+    return sorted(found)
+
+
+def repository_sources():
+    # DNF expands variables and honors its configured repository directories.
+    result = subprocess.run(["dnf5", "--dump-repo-config", "*"], env=ENV,
+                            capture_output=True, text=True, timeout=30, check=True)
+    sources = {}
+    blocks = re.split(r'^=+ "([^"\n]+)" repository configuration: =+[ \t]*$',
+                      result.stdout, flags=re.MULTILINE)
+    for index in range(1, len(blocks), 2):
+        repository, block = blocks[index:index + 2]
+        if not re.search(r"^enabled = 1$", block, re.MULTILINE):
+            continue
+        if not re.fullmatch(r"[A-Za-z0-9_.:-]+", repository):
+            continue
+        urls = []
+        for value in re.findall(r"^(?:baseurl|metalink|mirrorlist) = (.+)$", block, re.MULTILINE):
+            urls.extend(value.split())
+        sources[repository] = urls
+    return sources
+
+
+def problem_repositories(output, sources, disabled):
+    found = set()
+    # Match an explicit repo id, or an exact configured metadata URL. A host
+    # alone is insufficient: RPM Fusion hosts several independent repos.
+    explicit = re.findall(r"(?:repository|repo) ['\"]([^'\"\n]+)['\"]", output)
+    error_urls = re.findall(r"https?://[^\s\]\"<>]+", "\n".join(
+        line for line in output.splitlines()
+        if "Curl error" in line or "Failed to download" in line))
+    for repository, urls in sources.items():
+        if repository in disabled:
+            continue
+        if repository in explicit or any(
+            failed == url or failed.startswith(url.rstrip("/") + "/")
+            for url in urls for failed in error_urls
+        ):
+            found.add(repository)
+    return sorted(found)
+
+
+def skip_choices(packages, repositories):
+    choices = {}
+    for package in packages:
+        choices["Пропустить " + package] = ("package", package)
+    for repository in repositories:
+        choices["Пропустить репозиторий " + repository] = ("repository", repository)
+    return choices
+
+
+def apply_skip(choice, choices, excluded, disabled, log):
+    kind, value = choices[choice]
+    if kind == "package":
+        excluded.add(value)
+    else:
+        disabled.add(value)
+    message = "Пропущен " + ("пакет " if kind == "package" else "репозиторий ") + value
+    print(message + " (только на этот запуск).", flush=True)
+    log.write("\nUSER SKIPPED " + kind.upper() + ": " + value + "\n")
+    log.flush()
+
+
 def summary(output):
     # Keep repeated curl diagnostics and long URLs in the terminal/log only.
     # A bounded message keeps the action list visible on small screens.
     if "Failed to resolve the transaction" in output or "Problem:" in output:
         reason = "Конфликт зависимостей пакетов."
+    elif "Failed to download packages" in output:
+        reason = "Не удалось скачать пакеты."
     elif "Curl error (28)" in output or "Проверка превысила" in output:
         reason = "Истекло время ожидания репозитория."
     elif "Curl error" in output or "Failed to download" in output:
@@ -116,19 +192,25 @@ def preflight_ok(code, output):
     )
 
 
-def update(targets, installed, log):
+def update(targets, installed, log, sources=None):
     excluded = set()
+    disabled = set()
+    if sources is None:
+        sources = repository_sources()
     # Let DNF refresh expired metadata, without forcing every repo online.
     refresh = False
     while True:
         command = ["sudo", "env", "LC_ALL=C", "dnf5", "--color=never", "--best",
                    "--setopt=skip_broken=False", "--setopt=skip_unavailable=False",
+                   "--setopt=max_parallel_downloads=10", "--setopt=max_downloads_per_mirror=5",
                    "--setopt=assumeyes=False", "--setopt=assumeno=False",
                    "--setopt=timeout=15", "--setopt=*.timeout=15",
                    "--setopt=skip_if_unavailable=False",
                    "--setopt=*.skip_if_unavailable=False", "upgrade"]
         if excluded:
             command.append("--exclude=" + ",".join(sorted(excluded)))
+        if disabled:
+            command.append("--disable-repo=" + ",".join(sorted(disabled)))
         if refresh:
             command.append("--refresh")
         command.extend(targets)
@@ -146,17 +228,16 @@ def update(targets, installed, log):
         if not preflight_ok(code, output):
             conflict = "Failed to resolve the transaction" in output
             packages = problem_packages(output, installed, excluded) if conflict else []
-            choices = {}
-            for package in packages:
-                choices["Пропустить " + package] = package
+            repositories = problem_repositories(output, sources, disabled) if not conflict else []
+            choices = skip_choices(packages, repositories)
             message = "Установка ещё не началась.\n" + summary(output)
             if choices:
-                message += "\nПропуск — только на этот запуск."
+                message += "\nПропуск — только на этот запуск. Зависимости будут проверены заново."
+            if repositories:
+                message += "\nОбновления из пропущенного репозитория могут остаться неустановленными."
             choice = dialog([STOP, *choices, RETRY], message)
             if choice in choices:
-                package = choices[choice]
-                excluded.add(package)
-                log.write("\nUSER EXCLUDED: " + package + "\n")
+                apply_skip(choice, choices, excluded, disabled, log)
                 if targets and all(target in excluded for target in targets):
                     notify("Выбранный пакет пропущен. Больше нечего обновлять.")
                     return 0
@@ -178,15 +259,29 @@ def update(targets, installed, log):
         code, output = run_logged(real_command, log)
         if code == 0:
             suffix = " Пропущены: " + ", ".join(sorted(excluded)) if excluded else ""
+            if disabled:
+                suffix += " Пропущены репозитории: " + ", ".join(sorted(disabled))
             notify("Обновление завершено." + suffix)
             return 0
         if "Operation aborted by the user." in output:
             notify("Обновление отменено.")
             return 1
-        # Never exclude a package after RPM may have started changing the system.
-        if dialog([STOP, RETRY], "Обновление завершилось с ошибкой.\n"
-                  "Повтор запустит новую проверку.\n"
-                  + summary(output)) != RETRY:
+        # DNF's final download failure precedes the RPM transaction. Other errors
+        # (including scriptlets, signatures and transaction tests) cannot skip.
+        download_failed = "Failed to download packages" in output and not re.search(
+            r"Running transaction|Preparing transaction|Running (?:scriptlet|trigger)|RPM transaction", output,
+            re.IGNORECASE)
+        packages = download_packages(output, excluded) if download_failed else []
+        choices = skip_choices(packages, [])
+        message = "Обновление завершилось с ошибкой.\nПовтор запустит новую проверку.\n" + summary(output)
+        if choices:
+            message += "\nУстановка ещё не началась. Пропуск — только на этот запуск.\nЗависимости будут проверены заново."
+        choice = dialog([STOP, *choices, RETRY], message)
+        if choice in choices:
+            apply_skip(choice, choices, excluded, disabled, log)
+            refresh = False
+            continue
+        if choice != RETRY:
             notify("Обновление остановлено после ошибки. Подробности сохранены в журнале.")
             return 1
         refresh = True

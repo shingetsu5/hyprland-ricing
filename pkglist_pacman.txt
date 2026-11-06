@@ -14,6 +14,7 @@ file-roller
 fontconfig
 geoclue
 git
+gnome-control-center
 grim
 gsettings-desktop-schemas
 gtk3
@@ -59,7 +60,6 @@ ttf-liberation
 ttf-roboto
 tumbler
 util-linux
-uv
 vim
 waybar
 wayland

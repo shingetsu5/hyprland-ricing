@@ -66,14 +66,26 @@ class ConfigurationTests(unittest.TestCase):
             with self.subTest(choices=choices):
                 stage = self.prepare(str(index), *choices)
                 bar = (stage / '.config/waybar/config.jsonc').read_text()
-                hypr = (stage / '.config/hypr/hyprland.conf').read_text()
+                hypr = (stage / '.config/hypr/cursor.lua').read_text()
                 self.assertEqual('"battery",' in bar, battery)
                 self.assertEqual('Bibata-Modern-Ice' in hypr, cursor)
-                self.assertEqual('env = XCURSOR_THEME,Existing' in hypr, not cursor)
+                self.assertEqual('hl.env("XCURSOR_THEME", "Existing")' in hypr, not cursor)
                 self.assertEqual((stage / 'Pictures/wallpapers').exists(), wallpapers)
-                self.assertIn('3072x1920@165, auto, 2', (stage / '.config/hypr/monitors.conf').read_text())
-                self.assertIn('3840x2160@60, auto, 1.5', (stage / '.config/hypr/monitors.conf').read_text())
+                self.assertIn('mode = "3072x1920@165", position = "auto", scale = 2', (stage / '.config/hypr/monitors.lua').read_text())
+                self.assertIn('mode = "3840x2160@60", position = "auto", scale = 1.5', (stage / '.config/hypr/monitors.lua').read_text())
                 self.assertEqual((self.home / '.bashrc').read_text(), 'keep bashrc')
+
+    def test_preserve_lua_cursor_without_executing_user_config(self):
+        config = self.home / '.config/hypr'
+        (config / 'hyprland.conf').unlink()
+        (config / 'hyprland.lua').write_text('error("must not run")\nhl.env("XCURSOR_SIZE", "32")\n')
+        (config / 'cursor.lua').write_text('-- hl.env("XCURSOR_THEME", "Ignored")\nhl.env("XCURSOR_THEME", "Existing")\n')
+        stage = self.prepare(cursor=False)
+        cursor = (stage / '.config/hypr/cursor.lua').read_text()
+        self.assertIn('hl.env("XCURSOR_THEME", "Existing")', cursor)
+        self.assertIn('hl.env("XCURSOR_SIZE", "32")', cursor)
+        self.assertNotIn('Ignored', cursor)
+        self.assertNotIn('must not run', cursor)
 
     def test_preserve_existing_wallpaper_without_copy(self):
         image = self.home / 'Изображения/Мои обои/forest.png'
@@ -120,7 +132,7 @@ class ConfigurationTests(unittest.TestCase):
         for bad in ['|1234x5678|60|1', '|3840x2160|59.94|1', '|3840x2160|60|1.25', '|preferred|144|1']:
             with self.subTest(value=bad), self.assertRaises(ValueError):
                 configure.monitor_rule(bad)
-        self.assertEqual(configure.monitor_rule('|preferred|auto|1'), 'monitor = , preferred, auto, 1')
+        self.assertEqual(configure.monitor_rule('|preferred|auto|1'), 'hl.monitor({ output = "", mode = "preferred", position = "auto", scale = 1 })')
 
 
 class RuntimeTests(unittest.TestCase):

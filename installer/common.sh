@@ -340,7 +340,7 @@ rice_prepare_and_install() {
     mkdir -p "$RICE_TEMP/runtime"; chmod 700 "$RICE_TEMP/runtime"
     if ! env HOME="$RICE_TEMP/home" XDG_CONFIG_HOME="$RICE_TEMP/home/.config" \
         XDG_RUNTIME_DIR="$RICE_TEMP/runtime" Hyprland --verify-config \
-        --config "$RICE_TEMP/home/.config/hypr/hyprland.conf" > "$RICE_TEMP/hyprland-check.log" 2>&1; then
+        --config "$RICE_TEMP/home/.config/hypr/hyprland.lua" > "$RICE_TEMP/hyprland-check.log" 2>&1; then
         cat "$RICE_TEMP/hyprland-check.log"; rice_die 'Hyprland отклонил конфиг. Текущие конфиги не заменены.'
     fi
     python3 "$RICE_ROOT/installer/configure.py" deploy --stage "$RICE_TEMP/home" \
@@ -402,7 +402,7 @@ rice_preflight() {
         if [[ $RICE_DISTRO == arch ]]; then command -v pacman >/dev/null || rice_die 'Не найден pacman.'
         else command -v dnf5 >/dev/null || rice_die 'Не найден dnf5.'; fi
     fi
-    for file in installer/configure.py installer/state.py installer/assets.py installer/assets.json pkglist_pacman.txt pkglist_aur.txt pkglist_fedora.txt hypr/hyprland.conf; do
+    for file in installer/configure.py installer/state.py installer/assets.py installer/assets.json pkglist_pacman.txt pkglist_aur.txt pkglist_fedora.txt hypr/hyprland.lua; do
         [[ -s $RICE_ROOT/$file ]] || rice_die "Не найден обязательный файл: $file"
     done
 }

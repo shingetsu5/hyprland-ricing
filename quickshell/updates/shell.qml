@@ -22,6 +22,7 @@ ApplicationWindow {
     property bool opened: false
     property bool closing: false
     property bool checking: true
+    property bool refreshing: false
     property bool confirming: false
     property string errorText: ""
     property string platform: ""
@@ -41,24 +42,29 @@ ApplicationWindow {
         // Keep the last frame opaque: Hyprland fades the entire window and border together.
         Qt.callLater(Qt.quit)
     }
-    function check() {
+    function check(force = false) {
         if (fetch.running || decisionMode) return
-        checking = true
-        errorText = ""
+        fetch.command = ["python3", backend, "--json"]
+        if (force) fetch.command = ["python3", backend, "--json", "--force"]
         fetch.running = true
     }
     function receive(text) {
         try {
             let result = JSON.parse(text)
             errorText = result.error || ""
-            if (!errorText) {
+            refreshing = result.refreshing || false
+            checking = result.pending || false
+            if (result.packages !== undefined) {
                 packages = result.packages
                 platform = result.distro
                 manager = result.manager
                 checkedAt = result.checked_at
             }
-        } catch (error) { errorText = "Не удалось прочитать список обновлений." }
-        checking = false
+        } catch (error) {
+            checking = false
+            refreshing = false
+            errorText = "Не удалось прочитать список обновлений."
+        }
         if (!search.activeFocus) Qt.callLater(() => updateButton.forceActiveFocus())
     }
     function ask() {
@@ -101,6 +107,14 @@ ApplicationWindow {
         enabled: !root.confirming && !root.decisionMode
         onActivated: { search.forceActiveFocus(); search.selectAll() }
     }
+    Timer {
+        interval: 1500; repeat: true; running: root.refreshing && !root.decisionMode
+        onTriggered: root.check()
+    }
+    Timer {
+        interval: 600000; repeat: true; running: !root.decisionMode
+        onTriggered: root.check()
+    }
     Process {
         id: fetch
         command: ["python3", root.backend, "--json"]
@@ -110,6 +124,7 @@ ApplicationWindow {
             if (result.text.trim()) root.receive(result.text)
             else {
                 root.checking = false
+                root.refreshing = false
                 root.errorText = fetchError.text.trim() || "Не удалось запустить проверку обновлений."
             }
         }
@@ -142,7 +157,7 @@ ApplicationWindow {
         target: "updates"
         function reveal(): void { root.show(); root.raise(); root.requestActivate() }
         function state(): string {
-            return JSON.stringify({checking: root.checking, error: root.errorText, count: root.packages.length,
+            return JSON.stringify({checking: root.checking, error: root.errorText, refreshing: root.refreshing, count: root.packages.length,
                 filtered: root.filtered.length, confirming: root.confirming, yesFocused: yesButton.activeFocus,
                 updateFocused: updateButton.activeFocus, searchFocused: search.activeFocus,
                 decision: root.decisionMode, light: systemTheme.light, width: root.width, height: root.height})
@@ -189,7 +204,7 @@ ApplicationWindow {
                         Layout.fillWidth: true; spacing: 4
                         Text { text: root.decisionMode ? "Обновление системы" : "Обновления"; color: systemTheme.text; font { family: "Roboto"; pixelSize: 24; weight: Font.DemiBold } }
                         Text {
-                            text: root.decisionMode ? "Выбери действие" : root.checking ? "Проверяем доступные обновления…"
+                            text: root.decisionMode ? "Выбери действие" : root.checking ? "Получаем первый список обновлений…"
                                 : root.errorText ? "Проверка не завершена" : root.packages.length ? "Пакетов для обновления: " + root.packages.length : "Система обновлена"
                             color: systemTheme.muted; font.pixelSize: 12
                         }
@@ -213,7 +228,7 @@ ApplicationWindow {
                     }
                     Text { text: root.manager; color: systemTheme.muted; font.pixelSize: 12 }
                     Item { Layout.fillWidth: true }
-                    Text { text: root.checkedAt && !root.checking ? "Проверено в " + root.checkedAt : ""; color: systemTheme.muted; font.pixelSize: 11 }
+                    Text { text: root.checkedAt && !root.checking ? "Проверено " + root.checkedAt + (root.refreshing ? " · Проверяем в фоне…" : "") : ""; color: systemTheme.muted; font.pixelSize: 11 }
                 }
                 TextField {
                     id: search
@@ -355,7 +370,7 @@ ApplicationWindow {
                         Text { text: "Enter — обновить · Ctrl+F — поиск · Esc — закрыть"; color: systemTheme.muted; font.pixelSize: 10 }
                     }
                     Item { Layout.fillWidth: true }
-                    ActionButton { theme: systemTheme; label: root.errorText ? "Повторить проверку" : "Проверить снова"; enabled: !root.checking; onClicked: root.check() }
+                    ActionButton { theme: systemTheme; label: root.errorText ? "Повторить проверку" : "Проверить снова"; enabled: !root.refreshing && !fetch.running; onClicked: root.check(true) }
                 }
             }
             // The modal traps focus. A held Enter cannot also confirm the next step.
